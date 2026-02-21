@@ -93,7 +93,7 @@ condition:
 
   - condition: template
     value_template: >
-      {% set from_state = !input v_from_state %}
+      {% set from_state = v_from_state %}
       {% if from_state == "" %}
         true
       {% else %}
