@@ -1,0 +1,118 @@
+blueprint:
+  name: Appliance Finished – TTS Announcement
+  description: >
+    Announces via TTS when an appliance changes to a specific state
+    (e.g., "Finito"), with optional constraints and time window.
+  domain: automation
+  input:
+    appliance_entity:
+      name: Appliance Entity
+      description: The entity to monitor (e.g. input_select.lavatrice_status)
+      selector:
+        entity: {}
+
+    to_state:
+      name: To State
+      description: State that triggers the automation
+      default: "Finito"
+      selector:
+        text: {}
+
+    from_state:
+      name: From State (optional)
+      description: Only trigger if coming from this state
+      default: ""
+      selector:
+        text: {}
+
+    block_boolean:
+      name: Blocking Boolean
+      description: Automation runs only if this boolean is OFF
+      selector:
+        entity:
+          domain: input_boolean
+
+    start_time:
+      name: Start Time
+      default: "08:00:00"
+      selector:
+        time: {}
+
+    end_time:
+      name: End Time
+      default: "22:00:00"
+      selector:
+        time: {}
+
+    message:
+      name: Announcement Message
+      selector:
+        text: {}
+
+    media_players:
+      name: Media Players
+      description: Players that will announce the message
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+
+    volume:
+      name: Volume Level
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 1
+          step: 0.05
+          mode: slider
+
+    tts_service:
+      name: TTS Service
+      description: Example tts.google_say
+      default: tts.google_say
+      selector:
+        text: {}
+
+trigger:
+  - platform: state
+    entity_id: !input appliance_entity
+    to: !input to_state
+
+condition:
+  - condition: time
+    after: !input start_time
+    before: !input end_time
+
+  - condition: state
+    entity_id: !input block_boolean
+    state: "off"
+
+  - condition: template
+    value_template: >
+      {% set from_state = !input from_state %}
+      {% if from_state == "" %}
+        true
+      {% else %}
+        {{ trigger.from_state.state == from_state }}
+      {% endif %}
+
+action:
+  - repeat:
+      for_each: !input media_players
+      sequence:
+        - service: media_player.volume_set
+          target:
+            entity_id: "{{ repeat.item }}"
+          data:
+            volume_level: !input volume
+
+        - delay: "00:00:02"
+
+        - service: !input tts_service
+          target:
+            entity_id: "{{ repeat.item }}"
+          data:
+            message: !input message
+
+mode: single
