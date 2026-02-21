@@ -79,6 +79,9 @@ trigger:
     entity_id: !input appliance_entity
     to: !input to_state
 
+variables:
+  v_from_state: !input from_state
+  
 condition:
   - condition: time
     after: !input start_time
@@ -90,7 +93,7 @@ condition:
 
   - condition: template
     value_template: >
-      {% set from_state = !input from_state %}
+      {% set from_state = !input v_from_state %}
       {% if from_state == "" %}
         true
       {% else %}
