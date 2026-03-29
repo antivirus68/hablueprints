@@ -1,0 +1,64 @@
+blueprint:
+  name: Luce con sensore di movimento (Tramonto → Alba)
+  description: >
+    Accende una o più luci al rilevamento del movimento, solo nel periodo
+    compreso tra il tramonto e l'alba. La luce si spegne automaticamente
+    dopo un timeout configurabile dall'ultima rilevazione.
+  domain: automation
+  author: HomeAssistant Blueprint
+  input:
+    motion_sensor:
+      name: Sensore di movimento
+      description: Il sensore binario che rileva il movimento.
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: motion
+
+    light_targets:
+      name: Luci da accendere
+      description: Una o più luci da controllare.
+      selector:
+        target:
+          entity:
+            domain: light
+
+    no_motion_timeout:
+      name: Timeout spegnimento
+      description: >
+        Tempo di attesa dopo l'ultima rilevazione prima di spegnere la luce.
+      default: 120
+      selector:
+        number:
+          min: 10
+          max: 3600
+          unit_of_measurement: secondi
+          mode: slider
+
+trigger:
+  - platform: state
+    entity_id: !input motion_sensor
+    to: "on"
+
+condition:
+  - condition: sun
+    after: sunset
+    before: sunrise
+
+action:
+  - service: light.turn_on
+    target: !input light_targets
+
+  - wait_for_trigger:
+      - platform: state
+        entity_id: !input motion_sensor
+        to: "off"
+        for:
+          seconds: !input no_motion_timeout
+    continue_on_timeout: false
+
+  - service: light.turn_off
+    target: !input light_targets
+
+mode: restart
+max_exceeded: silent
